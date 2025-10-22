@@ -1,5 +1,6 @@
 import os
 from config import MAX_CHARS
+from google.genai import types
 
 def get_file_content(working_directory, file_path):
     """
@@ -15,20 +16,19 @@ def get_file_content(working_directory, file_path):
         return str(e)
     
 def __get_absolute_file_path(working_directory: str, file_path: str) -> str:
+    if file_path is None or file_path == '.':
+        raise Exception(f'Error: File path value is invalid')
+
     abs_working_dir = os.path.abspath(working_directory)
+    abs_full_path = os.path.abspath(os.path.join(abs_working_dir, file_path))
     
-    full_path = ""
-    if file_path is None or file_path == ".":
-        full_path = abs_working_dir
-    else:
-        abs_full_path = os.path.abspath(os.path.join(abs_working_dir, file_path))
-        if not abs_full_path.startswith(abs_working_dir):
-            raise Exception(f'Error: Cannot read "{file_path}" as it is outside the permitted working directory')
-        if os.path.isdir(abs_full_path):
-            raise Exception(f'Error: File not found or is not a regular file: "{file_path}"')
-        full_path = abs_full_path
+    if not abs_full_path.startswith(abs_working_dir):
+        raise Exception(f'Error: Cannot read "{file_path}" as it is outside the permitted working directory')
     
-    return full_path
+    if not os.path.isfile(abs_full_path):
+        raise Exception(f'Error: File not found or is not a regular file: "{file_path}"')
+    
+    return abs_full_path
 
 def __get_content_inside_file(absolute_full_path: str, file_path: str, max_chars: int) -> str:
     try:
@@ -43,3 +43,18 @@ def __get_content_inside_file(absolute_full_path: str, file_path: str, max_chars
         return content
     except Exception as e:
         raise Exception(f"Error: {str(e)}")
+    
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Read file contents.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="The file name to read their content.",
+            ),
+        },
+    ),
+)
